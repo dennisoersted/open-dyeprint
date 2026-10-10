@@ -23,10 +23,17 @@ def capture_date(img: Image.Image) -> datetime | None:
     except Exception:  # noqa: BLE001 - broken EXIF is common; just no date
         return None
     raw = exif.get_ifd(EXIF_IFD).get(DATETIME_ORIGINAL) or exif.get(DATETIME)
-    if not raw:
-        return None
+    return parse_exif_date(raw) if raw else None
+
+
+def parse_exif_date(raw) -> datetime | None:
+    """EXIF says "YYYY:MM:DD HH:MM:SS", but some apps (e.g. RapidRaw) write
+    "YYYY-MM-DD", sometimes with a "T" before the time. Accept all of those."""
+    text = str(raw).strip("\x00 ").replace("T", " ")
+    date_part = text[:10].replace("-", ":")
+    time_part = text[11:19] if len(text) >= 19 else "00:00:00"
     try:
-        return datetime.strptime(str(raw).strip("\x00 ")[:19], "%Y:%m:%d %H:%M:%S")
+        return datetime.strptime(f"{date_part} {time_part}", "%Y:%m:%d %H:%M:%S")
     except ValueError:
         return None
 

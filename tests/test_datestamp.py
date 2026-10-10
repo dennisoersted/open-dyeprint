@@ -87,3 +87,15 @@ def test_polaroid_sheet_has_square_photo_and_cut_line():
     cut = polaroid_frame(1181, 1748).cut_y
     assert sheet.getpixel((5, cut)) != (255, 255, 255)  # dashed line starts at the edge
     assert sheet.getpixel((5, cut + 20)) == (255, 255, 255)
+
+
+def test_parse_exif_date_variants():
+    from opendyeprint.datestamp import parse_exif_date
+    want = datetime(2026, 9, 27, 13, 7, 15)
+    assert parse_exif_date("2026:09:27 13:07:15") == want  # the EXIF standard
+    assert parse_exif_date("2026-09-27 13:07:15") == want  # RapidRaw exports
+    assert parse_exif_date("2026-09-27T13:07:15") == want
+    assert parse_exif_date("2026:09:27 13:07:15\x00") == want
+    assert parse_exif_date("2026:09:27") == datetime(2026, 9, 27)
+    assert parse_exif_date("    :  :     :  :  ") is None  # blank date some cameras write
+    assert parse_exif_date("garbage") is None
