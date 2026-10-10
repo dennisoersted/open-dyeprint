@@ -21,7 +21,7 @@ from .. import shell, winprint
 from ..color import (ColorSettings, Intent, list_system_profiles, monitor_profile,
                      profile_color_space, profile_description)
 from ..datestamp import STYLES as DATE_STYLES
-from ..datestamp import capture_date, date_text
+from ..datestamp import date_text, photo_date
 from ..layout import FitMode, PageGeometry, max_zoom, polaroid_frame, should_rotate
 from ..model import PhotoItem, sheet_index_of, sheets
 from ..render import IMAGE_EXTS, SRGB, RenderSettings, gap_pixels, photo_cells
@@ -786,7 +786,7 @@ class MainWindow(QMainWindow):
             if eff_dpi < 150:
                 lines.append("<span style='color:#c0392b'>Low resolution – may look soft.</span>")
         if rs.date_style and photo and photo.path in self.thumbs:
-            when = capture_date(self.thumbs[photo.path])
+            when = photo_date(self.thumbs[photo.path], photo)
             lines.append(f"<b>Date stamp</b> {date_text(when)}" if when else
                          "<span style='color:#d68910'>This photo has no recorded date, "
                          "so it gets no date stamp.</span>")

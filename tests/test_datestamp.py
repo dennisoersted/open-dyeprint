@@ -99,3 +99,46 @@ def test_parse_exif_date_variants():
     assert parse_exif_date("2026:09:27") == datetime(2026, 9, 27)
     assert parse_exif_date("    :  :     :  :  ") is None  # blank date some cameras write
     assert parse_exif_date("garbage") is None
+
+
+def test_parse_exif_date_more_variants():
+    from opendyeprint.datestamp import parse_exif_date
+    assert parse_exif_date("2026:9:7 13:07:15") == datetime(2026, 9, 7, 13, 7, 15)  # not padded
+    assert parse_exif_date(b"2026:09:27 13:07:15\x00") == datetime(2026, 9, 27, 13, 7, 15)
+    assert parse_exif_date("2026:09:27 99:99:99") == datetime(2026, 9, 27)  # bad time, good date
+    assert parse_exif_date("0000:00:00 00:00:00") is None
+
+
+def test_blank_original_date_falls_back_to_datetime():
+    img = Image.new("RGB", (4, 4))
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[0x9003] = "    :  :     :  :  "
+    exif[0x0132] = "2026:05:01 10:00:00"
+    img.info["exif"] = exif.tobytes()
+    assert capture_date(img) == datetime(2026, 5, 1, 10, 0, 0)
+
+
+def test_corrupt_exif_ifd_gives_no_date_instead_of_crashing():
+    class Broken:
+        def get_ifd(self, tag):
+            raise SyntaxError("corrupt IFD")
+
+    class Img:
+        def getexif(self):
+            return Broken()
+
+    assert capture_date(Img()) is None
+
+
+def test_photo_date_reads_exif_once_per_photo():
+    from opendyeprint.datestamp import photo_date
+    calls = []
+
+    class Img:
+        def getexif(self):
+            calls.append(1)
+            return Image.Exif()
+
+    item = PhotoItem("x")
+    assert photo_date(Img(), item) is None and photo_date(Img(), item) is None
+    assert len(calls) == 1 and item.taken_checked

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from .adjust import Adjustments
 
@@ -14,6 +15,9 @@ class PhotoItem:
     center: tuple[float, float] = (0.5, 0.5)  # crop centre, fraction of the photo
     zoom: float = 1.0  # Fill mode only; capped so the print never drops below printer resolution
     adjust: Adjustments = field(default_factory=Adjustments)
+    # When the photo was taken, read once from EXIF (see photo_date); the file doesn't change.
+    taken: datetime | None = None
+    taken_checked: bool = False
 
 
 def sheets(items: list[PhotoItem], per_sheet: int) -> list[list[PhotoItem | None]]:

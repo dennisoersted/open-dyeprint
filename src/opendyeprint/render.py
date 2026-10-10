@@ -89,7 +89,7 @@ def compose_cell(img: Image.Image, cw: int, ch: int, item: PhotoItem, settings: 
     out = rgb.resize((w, h), resample, box=p.crop, reducing_gap=None)
     out = adjust.apply(out, item.adjust)
     if settings.date_style in datestamp.STYLES:
-        when = datestamp.capture_date(img)
+        when = datestamp.photo_date(img, item)
         if when is not None:
             # Stamp in the photo's own upright orientation (undo the turn onto the sheet).
             if rotated:

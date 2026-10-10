@@ -54,6 +54,3 @@ class LayoutPicker(QWidget):
 
     def findData(self, data) -> int:  # noqa: N802
         return self._data.index(data) if data in self._data else -1
-
-    def blockSignals(self, block: bool) -> bool:  # noqa: N802
-        return super().blockSignals(block)

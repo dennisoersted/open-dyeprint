@@ -6,6 +6,7 @@ relative to the photo so the stamp looks the same in preview and print.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -17,25 +18,50 @@ DATETIME = 0x0132
 
 
 def capture_date(img: Image.Image) -> datetime | None:
-    """When the photo was taken, from EXIF (None if the file doesn't say)."""
+    """When the photo was taken, from EXIF (None if the file doesn't say).
+
+    Tries DateTimeOriginal first and falls back to DateTime, so a blank or broken
+    original date doesn't hide a good one.
+    """
     try:
         exif = img.getexif()
+        candidates = (exif.get_ifd(EXIF_IFD).get(DATETIME_ORIGINAL), exif.get(DATETIME))
     except Exception:  # noqa: BLE001 - broken EXIF is common; just no date
         return None
-    raw = exif.get_ifd(EXIF_IFD).get(DATETIME_ORIGINAL) or exif.get(DATETIME)
-    return parse_exif_date(raw) if raw else None
+    for raw in candidates:
+        when = parse_exif_date(raw) if raw else None
+        if when is not None:
+            return when
+    return None
+
+
+def photo_date(img: Image.Image, item) -> datetime | None:
+    """capture_date, remembered on the PhotoItem so previews don't re-read EXIF every frame."""
+    if not item.taken_checked:
+        item.taken = capture_date(img)
+        item.taken_checked = True
+    return item.taken
+
+
+# YYYY?MM?DD, optionally followed by " HH:MM[:SS]" or "THH:MM[:SS]". EXIF uses ":" in the
+# date, some apps (e.g. RapidRaw) use "-", and not everyone zero-pads.
+_DATE_RE = re.compile(r"(\d{4})[:\-/](\d{1,2})[:\-/](\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?")
 
 
 def parse_exif_date(raw) -> datetime | None:
-    """EXIF says "YYYY:MM:DD HH:MM:SS", but some apps (e.g. RapidRaw) write
-    "YYYY-MM-DD", sometimes with a "T" before the time. Accept all of those."""
-    text = str(raw).strip("\x00 ").replace("T", " ")
-    date_part = text[:10].replace("-", ":")
-    time_part = text[11:19] if len(text) >= 19 else "00:00:00"
-    try:
-        return datetime.strptime(f"{date_part} {time_part}", "%Y:%m:%d %H:%M:%S")
-    except ValueError:
+    if isinstance(raw, bytes):
+        raw = raw.decode("ascii", errors="ignore")
+    m = _DATE_RE.match(str(raw).strip("\x00 "))
+    if not m:
         return None
+    y, mo, d, h, mi, s = (int(v) if v else 0 for v in m.groups())
+    try:
+        return datetime(y, mo, d, h, mi, s)
+    except ValueError:
+        try:  # a broken time shouldn't throw away a good date
+            return datetime(y, mo, d)
+        except ValueError:
+            return None
 
 
 def date_text(d: datetime) -> str:
