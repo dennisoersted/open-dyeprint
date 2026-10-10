@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-dyeprint"
+version = "0.3.0"
+description = "Colour-managed photo printing for Windows, made for the Canon SELPHY CP1500."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["printing", "photo", "icc", "color-management", "canon", "selphy", "dye-sublimation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Printing",
+]
+dependencies = ["PySide6>=6.6", "Pillow>=10.0", "pywin32>=306", "pi-heif>=0.18"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pyinstaller>=6"]
+
+[project.scripts]
+opendyeprint = "opendyeprint.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+opendyeprint = ["assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
