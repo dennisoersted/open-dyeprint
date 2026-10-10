@@ -20,4 +20,5 @@ the `.exe`. Thank you to everyone who works on them.
 
 Qt, PySide6, libheif and libde265 are shipped unmodified as separate DLL and `.pyd` files
 in the `_internal` folder. You're free to replace them with your own builds of the same
-libraries. Their source code is available from the links above.
+libraries. Their source code is available from the links above. The GNU LGPL-3.0 and GPL-3.0
+texts are included as `licenses/GNU-LGPL-3.0.txt` and `licenses/GNU-GPL-3.0.txt`.
