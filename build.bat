@@ -15,7 +15,8 @@ if not exist .venv\Scripts\python.exe (
 rem Build in %TEMP% and copy the result, so cloud-sync tools (OneDrive, Google Drive)
 rem can't lock files while PyInstaller is still writing them.
 if exist dist\OpenDyePrint rmdir /s /q dist\OpenDyePrint
-robocopy "%TEMP%\opendyeprint-dist\OpenDyePrint" dist\OpenDyePrint /E /NFL /NDL /NJH /NJS /NP >nul
+rem /R /W: robocopy otherwise retries a locked file a million times, 30 s apart.
+robocopy "%TEMP%\opendyeprint-dist\OpenDyePrint" dist\OpenDyePrint /E /R:10 /W:2 /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 goto :error
 .venv\Scripts\python packaging\collect_licenses.py || goto :error
 echo.
