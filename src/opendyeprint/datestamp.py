@@ -179,7 +179,9 @@ def stamp(img: Image.Image, when: datetime, style_key: str) -> Image.Image:
     text = date_text(when)
     short = min(img.size)
     h = max(6.0, short * 0.035)  # digit height: 3.5 % of the short side
-    margin = short * 0.05
+    # 9 % keeps the date clear of what borderless overspray and the tear-off strips
+    # take off the paper edges (~9 mm on a postcard, ~6.5 mm on a two-up half).
+    margin = short * 0.09
     x0 = img.width - margin - text_width(text, h, style.glyphs)
     y0 = img.height - margin - h
 
