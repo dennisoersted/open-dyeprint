@@ -63,6 +63,16 @@ def load(path: str | Path) -> Image.Image:
     return img
 
 
+def turns_onto_cell(item: PhotoItem, settings: RenderSettings, src_w: int, src_h: int,
+                    cell_w: int, cell_h: int) -> bool:
+    """Whether the photo is turned 90° onto its cell, or cropped upright instead.
+
+    The one rule used by printing, the preview and the zoom limit.
+    """
+    allowed = settings.auto_rotate if item.turn is None else item.turn
+    return allowed and should_rotate(src_w, src_h, cell_w, cell_h)
+
+
 def compose_cell(img: Image.Image, cw: int, ch: int, item: PhotoItem, settings: RenderSettings,
                  target: ColorSettings, resample=Image.Resampling.LANCZOS,
                  cap_zoom: bool = False) -> tuple[Image.Image, CellInfo]:
@@ -74,7 +84,7 @@ def compose_cell(img: Image.Image, cw: int, ch: int, item: PhotoItem, settings: 
     rgb, icc = to_working_rgb(img)
     src_size = rgb.size
     center = item.center
-    rotated = settings.auto_rotate and should_rotate(rgb.width, rgb.height, cw, ch)
+    rotated = turns_onto_cell(item, settings, rgb.width, rgb.height, cw, ch)
     if rotated:
         # Clockwise, so the preview can turn the sheet back counter-clockwise and the
         # first photo of a two-up sheet reads on the left.

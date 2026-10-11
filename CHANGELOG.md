@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Crop upright:** cut a portrait slice out of a landscape photo (or the other way round
+  on two-up sheets) instead of turning it to fit.
+
 ## 0.3.0 – first public release
 
 - **Polaroid layout:** a square photo in a classic Polaroid-style frame, as wide as the

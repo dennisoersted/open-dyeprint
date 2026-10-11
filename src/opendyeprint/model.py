@@ -14,6 +14,9 @@ class PhotoItem:
     copies: int = 1
     center: tuple[float, float] = (0.5, 0.5)  # crop centre, fraction of the photo
     zoom: float = 1.0  # Fill mode only; capped so the print never drops below printer resolution
+    # Turn the photo 90° when its orientation doesn't match the cell? None = use the
+    # global "Auto-rotate" setting; False = crop it upright instead ("Crop upright").
+    turn: bool | None = None
     adjust: Adjustments = field(default_factory=Adjustments)
     # When the photo was taken, read once from EXIF (see photo_date); the file doesn't change.
     taken: datetime | None = None

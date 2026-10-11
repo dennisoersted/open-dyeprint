@@ -45,6 +45,8 @@ in the old days.
 - Borderless printing on the SELPHY.
 - **Drag** the photo in the preview to choose the crop and **zoom** with the mouse wheel.
   Zoom stops before the photo's resolution runs out, so zooming never makes the print soft.
+- **Landscape photo on a portrait sheet?** It's turned to fit, or hit *Crop upright* to cut
+  a portrait slice out of it instead.
 - **Date stamp** like an old film camera: the date the photo was taken (dd/mm/yyyy) in
   orange, red or yellow LCD digits, or orange dot matrix.
 
@@ -102,9 +104,11 @@ Requires Windows 10 or 11 (64-bit). No Python needed for the download.
    Windows: *Settings → Bluetooth & devices → Printers & scanners → Add device*.
    Windows uses its built-in driver for it. There's no Canon driver for Windows, and you
    don't need one.
-2. **Get an ICC profile** for the SELPHY. I use the
-   [Canon SELPHY CP1500 ICC profile from Farbenwerk](https://www.farbenwerk.com/en/blogs/news/canon-selphy-cp1500-icc-profile),
-   and it's really great. Big shout-out to them! Put the `.icc` file in
+2. **Get an ICC profile** for the SELPHY. I use two, and both are really great:
+   - the [Canon SELPHY CP1500 ICC profile from Farbenwerk](https://www.farbenwerk.com/en/blogs/news/canon-selphy-cp1500-icc-profile),
+   - the [Canon SELPHY ICC profile from Objektiv-Guide](https://www.objektiv-guide.de/icc-profil-canon-selphy/).
+
+   Big shout-out to both of them! Put the `.icc` file in
    `C:\Windows\System32\spool\drivers\color`, or pick it with *Browse...* in the app.
 3. **Turn off the printer's own auto-correction** in its settings, so it doesn't change
    colours on top of your profile.

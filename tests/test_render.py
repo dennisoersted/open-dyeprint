@@ -160,3 +160,27 @@ def test_print_render_caps_zoom_at_printer_resolution():
     assert r - l == pytest.approx(300)  # capped: 1 photo px per printer px (zoom 2)
     _, info = compose_cell(img, 300, 400, item, RenderSettings(auto_rotate=False), SRGB)
     assert info.placement.crop[2] - info.placement.crop[0] == pytest.approx(12)  # preview: uncapped
+
+
+def test_crop_upright_keeps_landscape_photo_unturned_on_portrait_cell():
+    img = Image.new("RGB", (4000, 3000), (0, 0, 255))
+    _, info = compose_cell(img, 1181, 1748, PhotoItem("x", turn=False), RenderSettings(), SRGB)
+    assert not info.rotated
+    l, t, r, b = info.placement.crop
+    assert (r - l) / (b - t) == pytest.approx(1181 / 1748, rel=1e-3)  # portrait slice of the photo
+
+
+def test_per_photo_turn_overrides_global_setting():
+    img = Image.new("RGB", (4000, 3000))
+    _, info = compose_cell(img, 1181, 1748, PhotoItem("x", turn=True), RenderSettings(auto_rotate=False), SRGB)
+    assert info.rotated
+    _, info = compose_cell(img, 1181, 1748, PhotoItem("x"), RenderSettings(auto_rotate=False), SRGB)
+    assert not info.rotated
+
+
+def test_turns_onto_cell_helper():
+    from opendyeprint.render import turns_onto_cell
+    rs = RenderSettings()
+    assert turns_onto_cell(PhotoItem("x"), rs, 4000, 3000, 1181, 1748)
+    assert not turns_onto_cell(PhotoItem("x", turn=False), rs, 4000, 3000, 1181, 1748)
+    assert not turns_onto_cell(PhotoItem("x", turn=True), rs, 3000, 4000, 1181, 1748)  # already fits

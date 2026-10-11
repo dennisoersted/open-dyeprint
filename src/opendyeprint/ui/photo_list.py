@@ -61,6 +61,10 @@ class PhotoList(QListWidget):
             marks.append(f"×{photo.copies}")
         if not photo.adjust.is_identity:
             marks.append("adjusted")
+        if photo.turn is False:
+            marks.append("cropped upright")
+        elif photo.turn is True:
+            marks.append("turned")
         if photo.zoom > 1.001:
             marks.append(f"zoom {photo.zoom * 100:.0f}%")
         elif photo.center != (0.5, 0.5):

@@ -24,7 +24,7 @@ from ..datestamp import STYLES as DATE_STYLES
 from ..datestamp import date_text, photo_date
 from ..layout import FitMode, PageGeometry, max_zoom, polaroid_frame, should_rotate
 from ..model import PhotoItem, sheet_index_of, sheets
-from ..render import IMAGE_EXTS, SRGB, RenderSettings, gap_pixels, photo_cells
+from ..render import IMAGE_EXTS, SRGB, RenderSettings, gap_pixels, photo_cells, turns_onto_cell
 from .adjust_panel import AdjustPanel
 from .layout_picker import LayoutPicker
 from .photo_list import PhotoList
@@ -133,14 +133,20 @@ class MainWindow(QMainWindow):
         self.zoom_slider.valueChanged.connect(self._zoom_slider_changed)
         self.zoom_label = QLabel()
         self.zoom_label.setMinimumWidth(170)
+        self.upright_btn = QPushButton("Crop upright")
+        self.upright_btn.setCheckable(True)
+        self.upright_btn.setToolTip("Crop this photo in its own orientation (e.g. a portrait slice of a "
+                                    "landscape photo) instead of turning it 90° to fit the sheet")
+        self.upright_btn.toggled.connect(self._upright_toggled)
         self.reset_crop_btn = QPushButton("Reset crop")
-        self.reset_crop_btn.setToolTip("Back to the centred, un-zoomed crop")
+        self.reset_crop_btn.setToolTip("Back to the centred, un-zoomed, un-turned crop")
         self.reset_crop_btn.clicked.connect(self._reset_crop)
         zrow = QHBoxLayout()
         zrow.setContentsMargins(12, 0, 12, 0)
         zrow.addWidget(QLabel("Zoom"))
         zrow.addWidget(self.zoom_slider, 1)
         zrow.addWidget(self.zoom_label)
+        zrow.addWidget(self.upright_btn)
         zrow.addWidget(self.reset_crop_btn)
 
         self.sheet_label = QLabel()
@@ -633,20 +639,26 @@ class MainWindow(QMainWindow):
 
     # ---- zoom ----
 
-    def _max_zoom_for(self, photo: PhotoItem) -> float | None:
-        """Zoom limit for a photo where it currently sits; None if not known yet."""
-        if photo.path not in self.sizes or self.fit_combo.currentData() != FitMode.FILL.value:
-            return None
+    def _print_cell(self, photo: PhotoItem):
+        """The cell (in printer pixels) the photo will be printed into; None if unknown."""
         geom = self._geometry()
         if geom is None:
             return None
         rs = self._render_settings()
         on_sheet = next((len(sh) for sh in sheets(self.list.items(), rs.per_sheet)
                          if any(p is photo for p in sh)), 1)
-        cell = photo_cells(geom.printable_w, geom.printable_h, on_sheet,
+        return photo_cells(geom.printable_w, geom.printable_h, on_sheet,
                            gap_pixels(rs.gap_mm, geom.dpi_x), rs.polaroid)[0]
+
+    def _max_zoom_for(self, photo: PhotoItem) -> float | None:
+        """Zoom limit for a photo where it currently sits; None if not known yet."""
+        if photo.path not in self.sizes or self.fit_combo.currentData() != FitMode.FILL.value:
+            return None
+        cell = self._print_cell(photo)
+        if cell is None:
+            return None
         sw, sh_ = self.sizes[photo.path]
-        if rs.auto_rotate and should_rotate(sw, sh_, cell.w, cell.h):
+        if turns_onto_cell(photo, self._render_settings(), sw, sh_, cell.w, cell.h):
             sw, sh_ = sh_, sw
         return max_zoom(sw, sh_, cell.w, cell.h)
 
@@ -676,7 +688,33 @@ class MainWindow(QMainWindow):
                 f"{photo.zoom * 100:.0f}%  (max {int(limit * 100)}%)" if limit > 1.0 else
                 "No room – photo resolution fully used")
         self.zoom_slider.blockSignals(False)
-        self.reset_crop_btn.setEnabled(photo is not None and (photo.zoom > 1.0 or photo.center != (0.5, 0.5)))
+        self._sync_upright_button(photo)
+        self.reset_crop_btn.setEnabled(photo is not None and (
+            photo.zoom > 1.0 or photo.center != (0.5, 0.5) or photo.turn is not None))
+
+    def _sync_upright_button(self, photo: PhotoItem | None):
+        """Only offered when the photo's orientation doesn't match its cell."""
+        cell = self._print_cell(photo) if photo and photo.path in self.sizes else None
+        mismatch = cell is not None and should_rotate(*self.sizes[photo.path], cell.w, cell.h)
+        self.upright_btn.blockSignals(True)
+        self.upright_btn.setEnabled(mismatch)
+        self.upright_btn.setChecked(mismatch and not turns_onto_cell(
+            photo, self._render_settings(), *self.sizes[photo.path], cell.w, cell.h))
+        self.upright_btn.blockSignals(False)
+
+    def _upright_toggled(self, upright: bool):
+        photo = self.list.current()
+        if photo is None:
+            return
+        want_turn = not upright
+        # Store only a difference from the global Auto-rotate setting.
+        photo.turn = None if want_turn == self.rotate_chk.isChecked() else want_turn
+        limit = self._max_zoom_for(photo)
+        if limit is not None:
+            photo.zoom = min(photo.zoom, limit)
+        self.list.refresh(photo)
+        self._sync_zoom_ui()
+        self._schedule_preview(immediate=True)
 
     def _set_zoom(self, photo: PhotoItem, zoom: float):
         limit = self._max_zoom_for(photo)
@@ -701,7 +739,7 @@ class MainWindow(QMainWindow):
         photo = self.list.current()
         if photo is None:
             return
-        photo.zoom, photo.center = 1.0, (0.5, 0.5)
+        photo.zoom, photo.center, photo.turn = 1.0, (0.5, 0.5), None
         self.list.refresh(photo)
         self._sync_zoom_ui()
         self._schedule_preview(immediate=True)
@@ -774,7 +812,7 @@ class MainWindow(QMainWindow):
             lines.append(f"<b>Polaroid</b> cut along the dashed line, {cut_mm:.0f} mm from the top")
         if photo and photo.path in self.sizes:
             sw, sh = self.sizes[photo.path]
-            if rs.auto_rotate and should_rotate(sw, sh, cell.w, cell.h):
+            if turns_onto_cell(photo, rs, sw, sh, cell.w, cell.h):
                 sw, sh = sh, sw
             fill = rs.fit is FitMode.FILL
             scale = max(cell.w / sw, cell.h / sh) if fill else min(cell.w / sw, cell.h / sh)
